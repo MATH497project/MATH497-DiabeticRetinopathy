@@ -15,10 +15,10 @@ class Data:
             self.__data[name] = pd.read_pickle(filepath + name + '.pickle')
 
     def __getitem__(self,name):
-        if self.__normdata.has_key("all_encounter_data"):
-            if self.__normdata.get("all_encounter_data") == None:
                 self.create_enc_table()
-            return self.__normdata["all_encounter_data"]
+        if self.__normdata.has_key(name):
+            if self.__normdata.get(name) is None:
+            return self.__normdata[name]
         
         return self.__data.__getitem__(name)
         
