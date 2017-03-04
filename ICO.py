@@ -87,8 +87,18 @@ class Data:
 
         # Proliferative Diabetic Retinopathy is under 362.02 for ICD9 and E(08|09|10|11|13).35
         dEI["PDR"]=dEI["Diagnosis_Code_ID"].str.contains("^362\.02|^E(?:0[89]|1[013])\.35.*")
-
+        
+        # Diabetic Retinopathy
         dEI["DR"]=dEI["mNPDR"] & dEI["MNPDR"] & dEI["SNPDR"] & dEI["PDR"]
+        
+        # Glaucoma Suspect is under 365.0 for ICD9 and H40.0 for ICD10
+        dEI["Glaucoma_Suspect"]=dEI["Diagnosis_Code_ID"].str.contains("^365\.0.*|^H40\.0.*")
+        
+        # Open-angle Glaucoma is under 365.1 for ICD9 and H40.1 for ICD10
+        dEI["Open-angle_Glaucoma"]=dEI["Diagnosis_Code_ID"].str.contains("^365\.1.*|^H40\.1.*")
+        
+        # Cataract is under 366 for ICD9 and H25 and H26 for ICD10
+        dEI["Cataract"]=dEI["Diagnosis_Code_ID"].str.contains("^366(?:\.\d{1,2})?|^H2[56](?:\.[A-Z0-9]{1,4})?")
         
         self.__normdata["all_encounter_data"] = \
             pd.merge(self.__normdata["all_encounter_data"],
@@ -100,18 +110,16 @@ class Data:
         
         # Average the past year of data
         f = lambda x: x[x["Enc_Date"]>=x["Enc_Date"].max() - pd.DateOffset(years=1)].drop(["Person_Nbr","Enc_Date"],axis=1).mean()
+        columns = ["Enc_Date", "Person_Nbr", "A1C", "BMI", "Glucose", "BP_Systolic", "BP_Diastolic"]
         self.__normdata["all_person_data"] = \
             pd.merge(self.__data["demographics"].set_index("Person_Nbr"),
-                     d_enc.loc[:,["Enc_Date",
-                                  "Person_Nbr",
-                                  "A1C",
-                                  "BMI",
-                                  "Glucose",
-                                  "BP_Systolic",
-                                  "BP_Diastolic"]].groupby("Person_Nbr").apply(f),
+                     d_enc.loc[:,columns].groupby("Person_Nbr").apply(f),
                      left_index=True, right_index=True)
+
         # Combine all diagnoses
+        columns = ["Person_Nbr","DM","DR","ME","MNPDR","PDR","SNPDR","mNPDR",
+                   "Glaucoma_Suspect","Open-angle_Glaucoma","Cataract"]
         self.__normdata["all_person_data"] = \
             pd.merge(self.__normdata["all_person_data"],
-                     d_enc.loc[:,["Person_Nbr","DM","DR","ME","MNPDR","PDR","SNPDR","mNPDR"]].groupby("Person_Nbr").any(),
+                     d_enc.loc[:,columns].groupby("Person_Nbr").any(),
                      left_index=True, right_index=True)
