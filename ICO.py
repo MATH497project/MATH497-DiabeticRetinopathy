@@ -39,28 +39,17 @@ class Data:
                 return NaN
                 
         # Split up the BP field into Systolic and Diastolic readings
-        d_enc = self.__data["all_encounter_data"]
+        d_enc = self.__data["all_encounter_data"].drop(["Enc_ID","Person_ID"], axis=1)
         pattern = re.compile("(?P<BP_Systolic>\d+)\s*\/\s*(?P<BP_Diastolic>\d+)")
         d_enc = pd.merge(d_enc, d_enc["BP"].str.extract(pattern, expand=True),
-                         left_index=True, right_index=True)
+                         left_index=True, right_index=True).drop("BP", axis=1)
         
-        # Drop columns with multiple values for a single Enc_ID (and drop Enc_ID, Person_ID)
+        # Drop columns with multiple values for a single Enc_Nbr
         # When multiple values are observed, take the mean and merge them back into the complete table
+        columns = ["A1C","BMI","BP_Systolic","BP_Diastolic","Glucose"]
         self.__normdata["all_encounter_data"] = \
-            pd.merge(d_enc.drop(["A1C",
-                                 "BMI",
-                                 "BP",
-                                 "BP_Systolic",
-                                 "BP_Diastolic",
-                                 "Glucose",
-                                 "Enc_ID",
-                                 "Person_ID"], axis=1).drop_duplicates().set_index("Enc_Nbr"),
-                     d_enc.loc[:,["Enc_Nbr",
-                                  "A1C",
-                                  "BMI",
-                                  "Glucose",
-                                  "BP_Systolic",
-                                  "BP_Diastolic"]].groupby("Enc_Nbr").agg(lambda x: np.mean(x.map(to_float))),
+            pd.merge(d_enc.drop(columns, axis=1).drop_duplicates().set_index("Enc_Nbr"),
+                     d_enc.groupby("Enc_Nbr")[columns].agg(lambda x: np.mean(x.map(to_float))),
                      left_index=True, right_index=True)
         
         # Add diagnoses to table
@@ -95,14 +84,16 @@ class Data:
         dEI["Glaucoma_Suspect"]=dEI["Diagnosis_Code_ID"].str.contains("^365\.0.*|^H40\.0.*")
         
         # Open-angle Glaucoma is under 365.1 for ICD9 and H40.1 for ICD10
-        dEI["Open-angle_Glaucoma"]=dEI["Diagnosis_Code_ID"].str.contains("^365\.1.*|^H40\.1.*")
+        dEI["Open_angle_Glaucoma"]=dEI["Diagnosis_Code_ID"].str.contains("^365\.1.*|^H40\.1.*")
         
         # Cataract is under 366 for ICD9 and H25 and H26 for ICD10
         dEI["Cataract"]=dEI["Diagnosis_Code_ID"].str.contains("^366(?:\.\d{1,2})?|^H2[56](?:\.[A-Z0-9]{1,4})?")
         
+        columns = ["DM","DR","ME","MNPDR","PDR","SNPDR","mNPDR","Glaucoma_Suspect",
+                   "Open_angle_Glaucoma","Cataract"]
         self.__normdata["all_encounter_data"] = \
             pd.merge(self.__normdata["all_encounter_data"],
-                     dEI.drop(["Diagnosis_Code_ID"],axis=1).groupby("Enc_Nbr").any(),
+                     dEI.groupby("Enc_Nbr")[columns].any(),
                      left_index=True, right_index=True)
                      
     def create_person_table(self):
@@ -117,9 +108,9 @@ class Data:
                      left_index=True, right_index=True)
 
         # Combine all diagnoses
-        columns = ["Person_Nbr","DM","DR","ME","MNPDR","PDR","SNPDR","mNPDR",
-                   "Glaucoma_Suspect","Open-angle_Glaucoma","Cataract"]
+        columns = ["DM","DR","ME","MNPDR","PDR","SNPDR","mNPDR","Glaucoma_Suspect",
+                   "Open_angle_Glaucoma","Cataract"]
         self.__normdata["all_person_data"] = \
             pd.merge(self.__normdata["all_person_data"],
-                     d_enc.loc[:,columns].groupby("Person_Nbr").any(),
+                     d_enc.groupby("Person_Nbr")[columns].any(),
                      left_index=True, right_index=True)
