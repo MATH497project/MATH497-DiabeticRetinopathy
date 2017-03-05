@@ -92,11 +92,16 @@ class Data:
         
         # Average the past year of data
         f = lambda x: x[x["Enc_Date"]>=x["Enc_Date"].max() - pd.DateOffset(years=1)].drop(["Person_Nbr","Enc_Date"],axis=1).mean()
-        columns = ["Enc_Date", "Person_Nbr", "A1C", "BMI", "Glucose", "BP_Systolic", "BP_Diastolic"]
+        columns1 = ["Person_Nbr","DOB","Gender","Race"]
+        columns2 = ["Enc_Date", "Person_Nbr", "A1C", "BMI", "Glucose", "BP_Systolic", "BP_Diastolic"]
         self.__normdata["all_person_data"] = \
-            pd.merge(self.__data["demographics"].set_index("Person_Nbr"),
-                     d_enc.loc[:,columns].groupby("Person_Nbr").apply(f),
+            pd.merge(self.__data["demographics"].loc[:,columns1].set_index("Person_Nbr"),
+                     d_enc.loc[:,columns2].groupby("Person_Nbr").apply(f),
                      left_index=True, right_index=True)
+
+        # Collect most recent encounter date
+        self.__normdata["all_person_data"]["Last_Encounter"] = \
+            d_enc.groupby("Person_Nbr")["Enc_Date"].max()
 
         # Combine all diagnoses
         columns = ["DM","ME","MNPDR","PDR","SNPDR","mNPDR","Glaucoma_Suspect",
@@ -105,3 +110,43 @@ class Data:
             pd.merge(self.__normdata["all_person_data"],
                      d_enc.groupby("Person_Nbr")[columns].any(),
                      left_index=True, right_index=True)
+        
+        # Standardize Race
+        standard_race_conversion_dict = {
+            'African American':'Black or African American',
+            'Black or African American':'Black or African American',
+            'Black/African American (Not Hispanic)':'Black or African American',
+            'American Indian or Alaska Native':'American Indian or Alaska Native',
+            'American Indian/Alaskan Native':'American Indian or Alaska Native',
+            'American Indian':'American Indian or Alaska Native',
+            'Native American Indian':'American Indian or Alaska Native',
+            'Alaskan Native':'American Indian or Alaska Native',
+            'Asian':'Asian',
+            'Chinese':'Asian',
+            'Indian':'Asian',
+            'Caucasian':'White',
+            'White (Not Hispanic / Latino)':'White, not Hispanic or Latino',
+            'White':'White',
+            'Declined to specify':'Unknown',
+            'Unknown/Not Reported':'Unknown',
+            'Greek':'White',
+            'Native Hawaiian or Other Pacific Islander':'Native Hawaiian and Other Pacific Islander',
+            'Hawaiian':'Native Hawaiian and Other Pacific Islander',
+            'Other Pacific Islander (Not Hawaiian)':'Native Hawaiian and Other Pacific Islander',
+            'Hispanic Or Latino (All Races)':'Hispanic or Latino',
+            'Hispanic':'Hispanic or Latino',
+            'More than one race':'Two or More Races',
+            'Multiracial':'Two or More Races',
+            'Multi-racial':'Two or More Races','Moroccan':'White',
+            float('nan'):'Unknown',
+            'Other Race':'Other Race',
+            'Other Race (Jamaican)':'Other Race'
+        }
+        self.__normdata["all_person_data"]['Race'] = \
+            self.__normdata["all_person_data"]['Race'].apply(lambda x: standard_race_conversion_dict.get(x,"Unknown"))
+        
+        # Add Age at most recent encounter
+        self.__normdata["all_person_data"]["Age"] = \
+            self.__normdata["all_person_data"]["Last_Encounter"].map(lambda x: x.year)\
+                - self.__normdata["all_person_data"]["DOB"].map(lambda x: x.year)
+        
