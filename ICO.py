@@ -60,8 +60,8 @@ class Data:
         dEI.loc[168442]="362.3"
         
         diagnoses = {
-            # Diabetes is under 250.* and 362.0.* for ICD9 and E08,E09,E10,E11,E13 for ICD10
-            "DM" : "^250.*|^362\.0.*|^E(?:0[89]|1[013])(?:\.[A-Z0-9]{1,4})?",
+            # Diabetes is under 250.* and 362.0.* for ICD9 and E08,E09,E10,E11,E13,O24 for ICD10
+            "DM" : "^250.*|^362\.0.*|^E(?:0[89]|1[013])(?:\.[A-Z0-9]{1,4})?|^O24.*",
             # Macular edema is under 362.07 for ICD9 and E(08|09|10|11|13).3([1-5]1|7) for ICD10
             "ME" : "^362\.07|^E(?:0[89]|1[013])\.3(?:[1-5]1|7).*",
             # Mild Nonproliferative Diabetic Retinopathy is under 362.04 for ICD9 and E(08|09|10|11|13).32
@@ -149,4 +149,4 @@ class Data:
         self.__normdata["all_person_data"]["Age"] = \
             self.__normdata["all_person_data"]["Last_Encounter"].map(lambda x: x.year)\
                 - self.__normdata["all_person_data"]["DOB"].map(lambda x: x.year)
-        
+    
