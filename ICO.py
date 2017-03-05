@@ -59,41 +59,32 @@ class Data:
         dEI.loc[90899]="367.4"
         dEI.loc[168442]="362.3"
         
-        # Diabetes is under 250.* and 362.0.* for ICD9 and E08,E09,E10,E11,E13 for ICD10
-        dEI["DM"]=dEI["Diagnosis_Code_ID"].str.contains("^250.*|^362\.0.*|^E(?:0[89]|1[013])(?:\.[A-Z0-9]{1,4})?")
+        diagnoses = {
+            # Diabetes is under 250.* and 362.0.* for ICD9 and E08,E09,E10,E11,E13 for ICD10
+            "DM" : "^250.*|^362\.0.*|^E(?:0[89]|1[013])(?:\.[A-Z0-9]{1,4})?",
+            # Macular edema is under 362.07 for ICD9 and E(08|09|10|11|13).3([1-5]1|7) for ICD10
+            "ME" : "^362\.07|^E(?:0[89]|1[013])\.3(?:[1-5]1|7).*",
+            # Mild Nonproliferative Diabetic Retinopathy is under 362.04 for ICD9 and E(08|09|10|11|13).32
+            "mNPDR" : "^362\.04|^E(?:0[89]|1[013])\.32.*",
+            # Moderate Nonproliferative Diabetic Retinopathy is under 362.05 for ICD9 and E(08|09|10|11|13).33
+            "MNPDR" : "^362\.05|^E(?:0[89]|1[013])\.33.*",
+            # Severe Nonproliferative Diabetic Retinopathy is under 362.06 for ICD9 and E(08|09|10|11|13).34
+            "SNPDR" : "^362\.06|^E(?:0[89]|1[013])\.34.*",
+            # Proliferative Diabetic Retinopathy is under 362.02 for ICD9 and E(08|09|10|11|13).35
+            "PDR" : "^362\.02|^E(?:0[89]|1[013])\.35.*",
+            # Glaucoma Suspect is under 365.0 for ICD9 and H40.0 for ICD10
+            "Glaucoma_Suspect" : "^365\.0.*|^H40\.0.*",
+            # Open-angle Glaucoma is under 365.1 for ICD9 and H40.1 for ICD10
+            "Open_angle_Glaucoma" : "^365\.1.*|^H40\.1.*",
+            # Cataract is under 366 for ICD9 and H25 and H26 for ICD10
+            "Cataract" : "^366(?:\.\d{1,2})?|^H2[56](?:\.[A-Z0-9]{1,4})?"
+        }
+        for diagnosis, pattern in diagnoses.iteritems():
+            dEI[diagnosis]=dEI["Diagnosis_Code_ID"].str.contains(pattern)
 
-        # Macular edema is under 362.07 for ICD9 and E(08|09|10|11|13).3([1-5]1|7) for ICD10
-        dEI["ME"]=dEI["Diagnosis_Code_ID"].str.contains("^362\.07|^E(?:0[89]|1[013])\.3(?:[1-5]1|7).*")
-
-        # Mild Nonproliferative Diabetic Retinopathy is under 362.04 for ICD9 and E(08|09|10|11|13).32
-        dEI["mNPDR"]=dEI["Diagnosis_Code_ID"].str.contains("^362\.04|^E(?:0[89]|1[013])\.32.*")
-
-        # Moderate Nonproliferative Diabetic Retinopathy is under 362.05 for ICD9 and E(08|09|10|11|13).33
-        dEI["MNPDR"]=dEI["Diagnosis_Code_ID"].str.contains("^362\.05|^E(?:0[89]|1[013])\.33.*")
-
-        # Severe Nonproliferative Diabetic Retinopathy is under 362.06 for ICD9 and E(08|09|10|11|13).34
-        dEI["SNPDR"]=dEI["Diagnosis_Code_ID"].str.contains("^362\.06|^E(?:0[89]|1[013])\.34.*")
-
-        # Proliferative Diabetic Retinopathy is under 362.02 for ICD9 and E(08|09|10|11|13).35
-        dEI["PDR"]=dEI["Diagnosis_Code_ID"].str.contains("^362\.02|^E(?:0[89]|1[013])\.35.*")
-        
-        # Diabetic Retinopathy
-        dEI["DR"]=dEI["mNPDR"] & dEI["MNPDR"] & dEI["SNPDR"] & dEI["PDR"]
-        
-        # Glaucoma Suspect is under 365.0 for ICD9 and H40.0 for ICD10
-        dEI["Glaucoma_Suspect"]=dEI["Diagnosis_Code_ID"].str.contains("^365\.0.*|^H40\.0.*")
-        
-        # Open-angle Glaucoma is under 365.1 for ICD9 and H40.1 for ICD10
-        dEI["Open_angle_Glaucoma"]=dEI["Diagnosis_Code_ID"].str.contains("^365\.1.*|^H40\.1.*")
-        
-        # Cataract is under 366 for ICD9 and H25 and H26 for ICD10
-        dEI["Cataract"]=dEI["Diagnosis_Code_ID"].str.contains("^366(?:\.\d{1,2})?|^H2[56](?:\.[A-Z0-9]{1,4})?")
-        
-        columns = ["DM","DR","ME","MNPDR","PDR","SNPDR","mNPDR","Glaucoma_Suspect",
-                   "Open_angle_Glaucoma","Cataract"]
         self.__normdata["all_encounter_data"] = \
             pd.merge(self.__normdata["all_encounter_data"],
-                     dEI.groupby("Enc_Nbr")[columns].any(),
+                     dEI.groupby("Enc_Nbr")[list(diagnoses)].any(),
                      left_index=True, right_index=True)
                      
     def create_person_table(self):
@@ -108,7 +99,7 @@ class Data:
                      left_index=True, right_index=True)
 
         # Combine all diagnoses
-        columns = ["DM","DR","ME","MNPDR","PDR","SNPDR","mNPDR","Glaucoma_Suspect",
+        columns = ["DM","ME","MNPDR","PDR","SNPDR","mNPDR","Glaucoma_Suspect",
                    "Open_angle_Glaucoma","Cataract"]
         self.__normdata["all_person_data"] = \
             pd.merge(self.__normdata["all_person_data"],
