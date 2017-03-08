@@ -22,34 +22,38 @@ class Data:
                 if name == "all_person_data": self.create_person_table()
             return self.__normdata[name]
         
-        return self.__data.__getitem__(name)
+        return self.__data.__getitem__(name)     
         
     def get_underlying(self):
         return self.__data
     
     def create_enc_table(self):
-        # Helper function to convert string values to floats
-        # 87 Glucose column have BP values which this function ignores and assigns NaN
-        # TODO: Swap the erroneous column values. Filter out outliers
-        NaN = float("NaN")
-        def to_float(x):
-            try:
-                return float(x)
-            except ValueError:
-                return NaN
-                
+        # TODO: Swap the erroneous column values.
+        
         # Split up the BP field into Systolic and Diastolic readings
         d_enc = self.__data["all_encounter_data"].drop(["Enc_ID","Person_ID"], axis=1)
         pattern = re.compile("(?P<BP_Systolic>\d+)\s*\/\s*(?P<BP_Diastolic>\d+)")
         d_enc = pd.merge(d_enc, d_enc["BP"].str.extract(pattern, expand=True),
                          left_index=True, right_index=True).drop("BP", axis=1)
         
+        # Define ranges for reasonable values
+        NaN = float("NaN")
+        filter_outliers = {
+            "A1C" : lambda x: x if 3.89 < x < 30 else NaN,
+            "BMI" : lambda x: x if 10 < x < 500 else NaN,
+            "BP_Systolic" : lambda x: x if 60 < x < 251 else NaN,
+            "BP_Diastolic" : lambda x: x if 30 < x < 180 else NaN,
+            "Glucose" : lambda x: x if 20 < x < 800 else NaN
+        }
+        for column in list(filter_outliers):
+            d_enc[column] = pd.to_numeric(d_enc[column], errors='coerce').map(filter_outliers[column])
+        
         # Drop columns with multiple values for a single Enc_Nbr
         # When multiple values are observed, take the mean and merge them back into the complete table
-        columns = ["A1C","BMI","BP_Systolic","BP_Diastolic","Glucose"]
+        columns = list(filter_outliers)
         self.__normdata["all_encounter_data"] = \
             pd.merge(d_enc.drop(columns, axis=1).drop_duplicates().set_index("Enc_Nbr"),
-                     d_enc.groupby("Enc_Nbr")[columns].agg(lambda x: np.mean(x.map(to_float))),
+                     d_enc.groupby("Enc_Nbr")[columns].mean(),
                      left_index=True, right_index=True)
         
         # Add diagnoses to table
