@@ -95,12 +95,15 @@ class Data:
         d_enc = self["all_encounter_data"]
         
         # Average the past year of data
-        f = lambda x: x[x["Enc_Date"]>=x["Enc_Date"].max() - pd.DateOffset(years=1)].drop(["Person_Nbr","Enc_Date"],axis=1).mean()
+        def average_func(column):
+            recent = column[column["Enc_Date"]>=column["Enc_Date"].max() - pd.DateOffset(years=1)]
+            return recent.drop(["Person_Nbr","Enc_Date"],axis=1).mean()
+        
         columns1 = ["Person_Nbr","DOB","Gender","Race"]
         columns2 = ["Enc_Date", "Person_Nbr", "A1C", "BMI", "Glucose", "BP_Systolic", "BP_Diastolic"]
         self.__normdata["all_person_data"] = \
             pd.merge(self.__data["demographics"].loc[:,columns1].set_index("Person_Nbr"),
-                     d_enc.loc[:,columns2].groupby("Person_Nbr").apply(f),
+                     d_enc.loc[:,columns2].groupby("Person_Nbr").apply(average_func),
                      left_index=True, right_index=True)
 
         # Collect most recent encounter date
