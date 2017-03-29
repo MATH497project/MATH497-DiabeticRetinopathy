@@ -141,6 +141,8 @@ def check_and_update(table_file_name_dict, local_fd=None):
         local_fd=os.getcwd()+'/data/'
         print('\tDefault path: '+local_fd)
     else:
+        if local_fd[len(local_fd)-1] != '/':
+            local_fd = local_fd + '/'
         print('\tCustomed path: '+local_fd)
     if not os.path.exists(local_fd):
         print('\tCreating the folder...')
