@@ -5,12 +5,12 @@ import re
 
 class Data:
     def __init__(self, filepath=None):
-        table_file_name_dict = {'all_encounter_data': 'all_encounter_data_Richard_20170307.pickle',
-                        'demographics': 'demographics_processed_Dan_20170304.pickle',
+        table_file_name_dict = {'all_encounter_data': 'all_encounter_data_Dan_20170329.pickle',
+                        'demographics': 'demographics_Dan_20170304.pickle',
                         'encounters': 'encounters.pickle',
                         'family_hist_for_Enc': 'family_hist_for_Enc.pickle',
                         'family_hist_list': 'family_hist_list.pickle',
-                        'ICD_for_Enc': 'ICD_for_Enc_processed_Dan_20170304.pickle',
+                        'ICD_for_Enc': 'ICD_for_Enc_Dan_20170304.pickle',
                         'macula_findings_for_Enc': 'macula_findings_for_Enc.pickle',
                         'SL_Lens_for_Enc': 'SL_Lens_for_Enc.pickle',
                         'SNOMED_problem_list': 'SNOMED_problem_list.pickle',
