@@ -5,7 +5,7 @@ import re
 
 class Data:
     def __init__(self, filepath=None):
-        table_file_name_dict = {'all_encounter_data': 'all_encounter_data_Dan_20170329.pickle',
+        table_file_name_dict = {'all_encounter_data': 'all_encounter_data_Dan_20170330.pickle',
                         'demographics': 'demographics_Dan_20170304.pickle',
                         'encounters': 'encounters.pickle',
                         'family_hist_for_Enc': 'family_hist_for_Enc.pickle',
@@ -16,7 +16,7 @@ class Data:
                         'SNOMED_problem_list': 'SNOMED_problem_list.pickle',
                         'systemic_disease_for_Enc': 'systemic_disease_for_Enc.pickle',
                         'systemic_disease_list': 'systemic_disease_list.pickle',
-                        'all_person_data': 'all_person_data_Richard_20170307.pickle',
+                        'all_person_data': 'all_person_data_Dan_20170330.pickle',
                         'person_profile': 'person_profile_df.pickle'}
 
         filepath=check_and_update(table_file_name_dict, filepath)
