@@ -3,6 +3,7 @@ import pandas as pd
 import re
 
 class Data:
+
     def __init__(self, filepath):
         table_names = ['all_encounter_data', 'demographics', 'encounters',
                        'family_hist_for_Enc', 'family_hist_list',
@@ -28,32 +29,51 @@ class Data:
         return self.__data
 
     def create_enc_table(self):
-        # TODO: Swap the erroneous column values.
+        # Swap the erroneous column values.
+        d_enc = self.__data["all_encounter_data"].drop(["Enc_ID","Person_ID"], axis=1)
+
+        pattern0= re.compile("\d+\s*\/\s*\d+")
+        index1 = d_enc['Glucose'].str.contains(pattern0, na=False)
+        temp = d_enc.loc[index1, 'Glucose']
+        d_enc.loc[index1, 'Glucose'] = d_enc.loc[index1, 'BP']
+        d_enc.loc[index1, 'BP'] = temp
+
+        index2 = d_enc.BP[d_enc.BP.notnull()][~d_enc.BP[d_enc.BP.notnull()].str.contains('/')].index
+        temp = d_enc.loc[index2, 'Glucose']
+        d_enc.loc[index2, 'Glucose'] = d_enc.loc[index2, 'BP']
+        d_enc.loc[index2, 'BP'] = temp
 
         # Split up the BP field into Systolic and Diastolic readings
-        d_enc = self.__data["all_encounter_data"].drop(["Enc_ID","Person_ID"], axis=1)
-        pattern = re.compile("(?P<BP_Systolic>\d+)\s*\/\s*(?P<BP_Diastolic>\d+)")
-        d_enc = pd.merge(d_enc, d_enc["BP"].str.extract(pattern, expand=True),
+        pattern1 = re.compile("(?P<BP_Systolic>\d+)\s*\/\s*(?P<BP_Diastolic>\d+)")
+        d_enc = pd.merge(d_enc, d_enc["BP"].str.extract(pattern1, expand=True),
                          left_index=True, right_index=True).drop("BP", axis=1)
 
-        # Define ranges for reasonable values
+        # Define ranges for reasonable values. Identify the data outside of 1.5 times of IQR as outliers
         NaN = float("NaN")
-        filter_outliers = {
-            "A1C" : lambda x: x if 3.89 < x < 30 else NaN,
-            "BMI" : lambda x: x if 10 < x < 500 else NaN,
-            "BP_Systolic" : lambda x: x if 60 < x < 251 else NaN,
-            "BP_Diastolic" : lambda x: x if 30 < x < 180 else NaN,
-            "Glucose" : lambda x: x if 20 < x < 800 else NaN
-        }
-        for column in list(filter_outliers):
-            d_enc[column] = pd.to_numeric(d_enc[column], errors='coerce').map(filter_outliers[column])
+        # filter_outliers = {
+        #     "A1C" : lambda x: x if 3.89 < x < 30 else NaN,
+        #     "BMI" : lambda x: x if 10 < x < 300 else NaN,
+        #     "BP_Systolic" : lambda x: x if 60 < x < 251 else NaN,
+        #     "BP_Diastolic" : lambda x: x if 30 < x < 180 else NaN,
+        #     "Glucose" : lambda x: x if 20 < x < 800 else NaN
+        # }
+        # for column in list(filter_outliers):
+        #     d_enc[column] = pd.to_numeric(d_enc[column], errors='coerce').map(filter_outliers[column])
+        quantitive_columns=['A1C', 'BMI', 'Glucose', 'BP_Diastolic', 'BP_Systolic']
+        for column in quantitive_columns:
+            temp0 = pd.to_numeric(d_enc[column], errors='coerce')
+            temp = temp0[temp0.notnull()]
+            Q2 = temp.quantile(0.75)
+            Q1 = temp.quantile(0.25)
+            IQR = Q2-Q1
+            d_enc[column] = temp0.map(lambda x: x if Q1 - 1.5 * IQR < x < Q2 + 1.5 * IQR else NaN)
 
         # Drop columns with multiple values for a single Enc_Nbr
         # When multiple values are observed, take the mean and merge them back into the complete table
-        columns = list(filter_outliers)
+        #columns = list(filter_outliers)
         self.__normdata["all_encounter_data"] = \
-            pd.merge(d_enc.drop(columns, axis=1).drop_duplicates().set_index("Enc_Nbr"),
-                     d_enc.groupby("Enc_Nbr")[columns].mean(),
+            pd.merge(d_enc.drop(quantitive_columns, axis=1).drop_duplicates().set_index("Enc_Nbr"),
+                     d_enc.groupby("Enc_Nbr")[quantitive_columns].mean(),
                      left_index=True, right_index=True)
 
         # Add diagnoses to table
@@ -92,6 +112,20 @@ class Data:
                      dEI.groupby("Enc_Nbr")[list(diagnoses)].any(),
                      left_index=True, right_index=True)
 
+        # Select the worst diagnosis of DR for each multi-diagnosis encounter
+        target_diagnosis = ['PDR', 'SNPDR', 'MNPDR', 'mNPDR']
+        def worstDR(row):
+            temp = np.where(row)[0]
+            if len(temp)>0:
+                return target_diagnosis[temp[0]]
+            else:
+                return 'no_DR'
+
+        self.__normdata['all_encounter_data']['DR_diagnosis'] = \
+            self.__normdata["all_encounter_data"].apply(lambda x: worstDR(x[target_diagnosis]), axis=1)
+
+
+
     def create_person_table(self):
         d_enc = self["all_encounter_data"]
 
@@ -112,12 +146,32 @@ class Data:
             d_enc.groupby("Person_Nbr")["Enc_Date"].max()
 
         # Combine all diagnoses
-        columns = ["DM","ME","MNPDR","PDR","SNPDR","mNPDR","Glaucoma_Suspect",
-                   "Open_angle_Glaucoma","Cataract"]
+        columns = ["DM","ME","MNPDR","PDR","SNPDR","mNPDR",
+                    "Glaucoma_Suspect", "Open_angle_Glaucoma","Cataract"]
         self.__normdata["all_person_data"] = \
             pd.merge(self.__normdata["all_person_data"],
                      d_enc.groupby("Person_Nbr")[columns].any(),
                      left_index=True, right_index=True)
+
+        # Select the worst DR diagnosis
+        target_diagnosis = ['PDR', 'SNPDR', 'MNPDR', 'mNPDR']
+
+        d_enc['DR_diagnosis_idx'] = d_enc['DR_diagnosis'].apply(lambda x: target_diagnosis.index(x) if x!='no_DR' else 4)
+        self.__normdata['all_person_data']['worst_DR'] = \
+            d_enc.groupby('Person_Nbr')['DR_diagnosis_idx'].min().apply(lambda x: target_diagnosis[x] if x<4 else 'no_DR')
+
+        # Select the recent DR diagnosis
+        def recent_DR(groupbyblock):
+            templist = groupbyblock.sort_values(['Enc_Date'],ascending=False)['DR_diagnosis_idx'].values
+            temp = np.where(templist!=4)[0]
+            if len(temp) > 0:
+                return target_diagnosis[templist[temp[0]]]
+            else:
+                return 'no_DR'
+
+        self.__normdata['all_person_data']['recent_DR'] = \
+            d_enc.groupby('Person_Nbr').apply(lambda x: recent_DR(x))
+
 
         # Standardize Race
         standard_race_conversion_dict = {
