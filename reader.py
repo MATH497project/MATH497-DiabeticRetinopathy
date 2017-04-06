@@ -16,8 +16,10 @@ class Data:
                         'SNOMED_problem_list': 'SNOMED_problem_list.pickle',
                         'systemic_disease_for_Enc': 'systemic_disease_for_Enc.pickle',
                         'systemic_disease_list': 'systemic_disease_list.pickle',
-                        'all_person_data': 'all_person_data_Dan_20170330.pickle',
-                        'person_profile': 'person_profile_df.pickle'}
+                        'all_person_data': 'all_person_data_Dan_20170406.pickle',
+                        'person_profile': 'person_profile_df.pickle'
+                        'visual_accuity': '2017_03_30_visual_acuity_columns.pickle',
+                        'refractive_index': '2017_03_30_refractive_index_columns.pickle'}
 
         filepath=check_and_update(table_file_name_dict, filepath)
 
