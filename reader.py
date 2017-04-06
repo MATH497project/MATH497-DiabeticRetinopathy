@@ -17,7 +17,7 @@ class Data:
                         'systemic_disease_for_Enc': 'systemic_disease_for_Enc.pickle',
                         'systemic_disease_list': 'systemic_disease_list.pickle',
                         'all_person_data': 'all_person_data_Dan_20170406.pickle',
-                        'person_profile': 'person_profile_df.pickle'
+                        'person_profile': 'person_profile_df.pickle',
                         'visual_accuity': '2017_03_30_visual_acuity_columns.pickle',
                         'refractive_index': '2017_03_30_refractive_index_columns.pickle'}
 
