@@ -178,34 +178,34 @@ class Data:
             'African American':'Black or African American',
             'Black or African American':'Black or African American',
             'Black/African American (Not Hispanic)':'Black or African American',
-            'American Indian or Alaska Native':'Other Race',
-            'American Indian/Alaskan Native':'Other Race',
-            'American Indian':'Other Race',
-            'Native American Indian':'Other Race',
-            'Alaskan Native':'Other Race',
+            'American Indian or Alaska Native':'Other',
+            'American Indian/Alaskan Native':'Other',
+            'American Indian':'Other',
+            'Native American Indian':'Other',
+            'Alaskan Native':'Other',
             'Asian':'Asian',
             'Chinese':'Asian',
             'Indian':'Asian',
             'Caucasian':'White',
             'White (Not Hispanic / Latino)':'White',
             'White':'White',
-            'Declined to specify':'Unknown',
-            'Unknown/Not Reported':'Unknown',
+            'Declined to specify':'Other',
+            'Unknown/Not Reported':'Other',
             'Greek':'White',
-            'Native Hawaiian or Other Pacific Islander':'Other Race',
-            'Hawaiian':'Other Race',
-            'Other Pacific Islander (Not Hawaiian)':'Other Race',
+            'Native Hawaiian or Other Pacific Islander':'Other',
+            'Hawaiian':'Other',
+            'Other Pacific Islander (Not Hawaiian)':'Other',
             'Hispanic Or Latino (All Races)':'Hispanic or Latino',
             'Hispanic':'Hispanic or Latino',
-            'More than one race':'Two or More Races',
-            'Multiracial':'Two or More Races',
-            'Multi-racial':'Two or More Races','Moroccan':'White',
-            float('nan'):'Unknown',
-            'Other Race':'Other Race',
-            'Other Race (Jamaican)':'Other Race'
+            'More than one race':'Other',
+            'Multiracial':'Other',
+            'Multi-racial':'Other','Moroccan':'White',
+            float('nan'):'Other',
+            'Other Race':'Other',
+            'Other Race (Jamaican)':'Other'
         }
         self.__normdata["all_person_data"]['Race'] = \
-            self.__normdata["all_person_data"]['Race'].apply(lambda x: standard_race_conversion_dict.get(x,"Unknown"))
+            self.__normdata["all_person_data"]['Race'].apply(lambda x: standard_race_conversion_dict.get(x,"Other"))
 
         # Add Age at most recent encounter
         self.__normdata["all_person_data"]["Age"] = \
