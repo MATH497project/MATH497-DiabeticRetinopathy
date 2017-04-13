@@ -52,6 +52,8 @@ def get_credentials():
             credentials = tools.run(flow, store)
         print('Storing credentials to ' + credential_path)
     return credentials"""
+
+    os.chdir(os.path.dirname(os.path.realpath(__file__))) # change working directory. useful when running scripts from sub-folders
     store = Storage('drive-python-quickstart.json')
     credentials = store.get()
     return credentials
