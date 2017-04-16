@@ -5,16 +5,22 @@ import re
 class Data:
 
     def __init__(self, filepath):
-        table_names = ['all_encounter_data', 'demographics', 'encounters',
-                       'family_hist_for_Enc', 'family_hist_list',
-                       'ICD_for_Enc', 'macula_findings_for_Enc',
-                       'SL_Lens_for_Enc', 'SNOMED_problem_list',
-                       'systemic_disease_for_Enc', 'systemic_disease_list']
+        table_names = {'all_encounter_data': 'all_encounter_data.pickle',
+                       'demographics': 'demographics_Dan_20170304.pickle',
+                       'encounters': 'encounters.pickle',
+                       'ICD_for_Enc': 'ICD_for_Enc_Dan_20170304.pickle',
+                       'SNOMED_problem_list': 'SNOMED_problem_list.pickle',
+                       'refractive_index': '2017_03_30_refractive_index_columns.pickle',
+                       'visual_accuity': '2017_03_30_visual_acuity_columns.pickle',
+                       'family_hist': 'pgp1.csv'}
         self.__data = {}
         self.__normdata = {"all_encounter_data" : None,
                            "all_person_data" : None}
-        for name in table_names:
-            self.__data[name] = pd.read_pickle(filepath + name + '.pickle')
+        for name, file_name in table_names.items():
+            if name == 'family_hist':
+                self.__data[name] = pd.read_csv(filepath + file_name)
+            else:
+                self.__data[name] = pd.read_pickle(filepath + file_name)
 
     def __getitem__(self,name):
         if self.__normdata.has_key(name):
@@ -48,6 +54,17 @@ class Data:
         d_enc = pd.merge(d_enc, d_enc["BP"].str.extract(pattern1, expand=True),
                          left_index=True, right_index=True).drop("BP", axis=1)
 
+        # Add the processed refractive indices and visual accuity numerical as quantitive data
+        d_enc = d_enc.merge(
+                self.__data['refractive_index'][['MR_OD_SPH_Numeric', 'MR_OD_CYL_Numeric',
+                                                'MR_OS_SPH_Numeric', 'MR_OS_CYL_Numeric']],
+                left_on = 'Enc_Nbr', right_index = True)
+
+        d_enc = d_enc.merge(
+                self.__data['visual_accuity'][['MR_OS_DVA_ability', 'MR_OD_DVA_ability',
+                                               'MR_OS_NVA_ability', 'MR_OD_NVA_ability']],
+                left_on = 'Enc_Nbr', right_index = True)
+
         # Define ranges for reasonable values. Identify the data outside of 1.5 times of IQR as outliers
         NaN = float("NaN")
         # filter_outliers = {
@@ -59,7 +76,11 @@ class Data:
         # }
         # for column in list(filter_outliers):
         #     d_enc[column] = pd.to_numeric(d_enc[column], errors='coerce').map(filter_outliers[column])
-        quantitive_columns=['A1C', 'BMI', 'Glucose', 'BP_Diastolic', 'BP_Systolic']
+        quantitive_columns=['A1C', 'BMI', 'Glucose', 'BP_Diastolic', 'BP_Systolic',
+                            'MR_OD_SPH_Numeric', 'MR_OD_CYL_Numeric',
+                            'MR_OS_SPH_Numeric', 'MR_OS_CYL_Numeric',
+                            'MR_OS_DVA_ability', 'MR_OD_DVA_ability',
+                            'MR_OS_NVA_ability', 'MR_OD_NVA_ability']
         for column in quantitive_columns:
             temp0 = pd.to_numeric(d_enc[column], errors='coerce')
             temp = temp0[temp0.notnull()]
@@ -70,7 +91,7 @@ class Data:
 
         # Drop columns with multiple values for a single Enc_Nbr
         # When multiple values are observed, take the mean and merge them back into the complete table
-        #columns = list(filter_outliers)
+        # columns = list(filter_outliers)
         self.__normdata["all_encounter_data"] = \
             pd.merge(d_enc.drop(quantitive_columns, axis=1).drop_duplicates().set_index("Enc_Nbr"),
                      d_enc.groupby("Enc_Nbr")[quantitive_columns].mean(),
@@ -80,8 +101,8 @@ class Data:
         dEI = self.__data["ICD_for_Enc"].loc[:,["Enc_Nbr", "Diagnosis_Code_ID"]]
 
         # Manually fix erroneous values
-        dEI.loc[90899]="367.4"
-        dEI.loc[168442]="362.3"
+        # dEI.loc[90899]="367.4"
+        # dEI.loc[168442]="362.3"
 
         diagnoses = {
             # Diabetes is under 250.* and 362.0.* for ICD9 and E08,E09,E10,E11,E13,O24 for ICD10
@@ -127,7 +148,7 @@ class Data:
 
 
     def create_person_table(self):
-        d_enc = self["all_encounter_data"]
+        d_enc = self["all_encounter_data"].copy()
 
         # Average the past year of data
         def average_func(column):
@@ -135,7 +156,11 @@ class Data:
             return recent.drop(["Person_Nbr","Enc_Date"],axis=1).mean()
 
         columns1 = ["Person_Nbr","DOB","Gender","Race"]
-        columns2 = ["Enc_Date", "Person_Nbr", "A1C", "BMI", "Glucose", "BP_Systolic", "BP_Diastolic"]
+        columns2 = ["Enc_Date", "Person_Nbr", "A1C", "BMI", "Glucose", "BP_Systolic", "BP_Diastolic",
+                    'MR_OD_SPH_Numeric', 'MR_OD_CYL_Numeric',
+                    'MR_OS_SPH_Numeric', 'MR_OS_CYL_Numeric',
+                    'MR_OS_DVA_ability', 'MR_OD_DVA_ability',
+                    'MR_OS_NVA_ability', 'MR_OD_NVA_ability']
         self.__normdata["all_person_data"] = \
             pd.merge(self.__data["demographics"].loc[:,columns1].set_index("Person_Nbr"),
                      d_enc.loc[:,columns2].groupby("Person_Nbr").apply(average_func),
@@ -144,6 +169,32 @@ class Data:
         # Collect most recent encounter date
         self.__normdata["all_person_data"]["Last_Encounter"] = \
             d_enc.groupby("Person_Nbr")["Enc_Date"].max()
+
+        # Add the recent smoking status to each person
+        def recent_smoking(groupbyblock):
+            tempblock = groupbyblock[groupbyblock['Smoking_Status'].notnull()]
+            templist = tempblock.sort_values(['Enc_Date'],ascending=False)['Smoking_Status'].str.lower().values
+            if len(templist)==0:
+                return 'unknown if ever smoked'
+            else:
+                return templist[0]
+        self.__normdata["all_person_data"]['recent_smoking_status'] = \
+            d_enc.groupby('Person_Nbr').apply(lambda x: recent_smoking(x))
+
+        # Merge the processed family history (DM and Glucose, the 2 most frequent
+        # diagnoses in parent and grandparent level)
+        fami = self.__data['family_hist'].set_index('Person_Nbr')[['DM', 'G']]
+        family_DM_converter_dict = {1:'P_DM', 2:'P_NDM', 3:'Gp_DM', 4:'Gp_NDM',
+                                    5:'Gp_SM_P_DM', 6: 'G_DM_P_NDM', 7:'G_NDM_P_DM',
+                                    8:'GP_NDM_P_NDM', 9:'Unknown' }
+        family_G_converter_dict = {1:'P_G', 2:'P_NG', 3:'Gp_G', 4:'Gp_NG',
+                                   5:'Gp_G_P_G', 6: 'GP_G_P_NG', 7: 'G_NG_P_G',
+                                   8: 'GP_NG_P_NG',  9: 'Unknown'}
+        fami['family_DM'] = fami['DM'].map(lambda x: family_DM_converter_dict[x])
+        fami['family_G'] = fami['G'].map(lambda x: family_G_converter_dict[x])
+        self.__normdata["all_person_data"] = \
+            self.__normdata["all_person_data"].merge(fami[['family_DM', 'family_G']],
+            left_index = True, right_index = True)
 
         # Combine all diagnoses
         columns = ["DM","ME","MNPDR","PDR","SNPDR","mNPDR",
