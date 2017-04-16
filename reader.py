@@ -21,7 +21,9 @@ class Data:
                         'visual_accuity': '2017_03_30_visual_acuity_columns.pickle',
                         'refractive_index': '2017_03_30_refractive_index_columns.pickle',
                         'baseline_missingHandled': 'baseline_missingHandled_Dan_20170406.pickle',
-                        'baseline_raw': 'baseline_raw_Dan_20170406.pickle'}
+                        'baseline_raw': 'baseline_raw_Dan_20170406.pickle',
+                        'morefeatures_missingHandled': 'Morefeatures_missingHandled_Dan_20170415.pickle',
+                        'morefeatures_raw': 'Morefeatures_raw_Dan_20170415.pickle'}
 
         filepath=check_and_update(table_file_name_dict, filepath)
 
