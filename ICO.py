@@ -185,10 +185,10 @@ class Data:
         # diagnoses in parent and grandparent level)
         fami = self.__data['family_hist'].set_index('Person_Nbr')[['DM', 'G']]
         family_DM_converter_dict = {1:'P_DM', 2:'P_NDM', 3:'Gp_DM', 4:'Gp_NDM',
-                                    5:'Gp_SM_P_DM', 6: 'G_DM_P_NDM', 7:'G_NDM_P_DM',
+                                    5:'Gp_DM_P_DM', 6: 'Gp_DM_P_NDM', 7:'Gp_NDM_P_DM',
                                     8:'GP_NDM_P_NDM', 9:'Unknown' }
         family_G_converter_dict = {1:'P_G', 2:'P_NG', 3:'Gp_G', 4:'Gp_NG',
-                                   5:'Gp_G_P_G', 6: 'GP_G_P_NG', 7: 'G_NG_P_G',
+                                   5:'Gp_G_P_G', 6: 'GP_G_P_NG', 7: 'Gp_NG_P_G',
                                    8: 'GP_NG_P_NG',  9: 'Unknown'}
         fami['family_DM'] = fami['DM'].map(lambda x: family_DM_converter_dict[x])
         fami['family_G'] = fami['G'].map(lambda x: family_G_converter_dict[x])
